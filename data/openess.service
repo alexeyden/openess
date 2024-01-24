@@ -1,0 +1,8 @@
+[Unit]
+Description=OpenESS MQTT export daemon
+
+[Service]
+ExecStart=/usr/local/bin/openess -c /etc/openess/config.json -b
+
+[Install]
+WantedBy=multi-user.target

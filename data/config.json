@@ -1,0 +1,19 @@
+{
+    "BindPort": 8899,
+    "DeviceAddr": "192.168.1.37:58899",
+    "ProtoPath": "data/",
+    "Export": {
+        "Broker": "tcp://127.0.0.1:1883"
+    },
+    "Collector": {
+        "Interval": "500ms",
+        "Enabled": true,
+        "Registers": {
+            "working_state": "Working State",
+            "output_voltage": "Output voltage",
+            "output_power": "Output apparent power ",
+            "output_active_power": "Output active power",
+            "output_power_percent": "AC output Load %"
+        }
+    }
+}
