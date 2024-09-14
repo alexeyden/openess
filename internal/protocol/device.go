@@ -21,8 +21,12 @@ type Device struct {
 func Connect(deviceAddr string, localPort int) (*Device, error) {
 	log.PrDebug("proto: starting up tcp server on %d port\n", localPort)
 
-	listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", localPort))
+    listenAddr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("0.0.0.0:%d", localPort))
+	if err != nil {
+		return nil, err
+	}
 
+	listener, err := net.ListenTCP("tcp", listenAddr)
 	if err != nil {
 		return nil, err
 	}
@@ -60,6 +64,8 @@ func Connect(deviceAddr string, localPort int) (*Device, error) {
 	if !strings.HasPrefix(data, "rsp>server=") {
 		return nil, errors.New(fmt.Sprintf("unexpected answer: %s", data))
 	}
+
+	listener.SetDeadline(time.Now().Add(time.Second * 5))
 
 	conn, err = listener.Accept()
 	if err != nil {
