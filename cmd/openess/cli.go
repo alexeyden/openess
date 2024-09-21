@@ -65,6 +65,7 @@ func InteractiveMain(args Args) {
 		DeviceAddr: config.DeviceAddr,
 		LocalPort:  config.BindPort,
 		ProtoPath:  config.ProtoPath,
+		Protocol:   config.Protocol,
 	}
 
 	if args.DeviceAddr != nil {

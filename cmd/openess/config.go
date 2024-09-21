@@ -12,6 +12,7 @@ type Config struct {
 	BindPort   int
 	DeviceAddr string
 	ProtoPath  string
+	Protocol  *string
 	Collector  collector.Config
 	Export     export.Config
 }

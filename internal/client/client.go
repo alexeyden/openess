@@ -18,6 +18,7 @@ type Config struct {
 	LocalPort  int
 	DeviceAddr string
 	ProtoPath  string
+	Protocol  *string
 }
 
 type Response struct {
@@ -137,7 +138,14 @@ func (task *clientTask) connect() error {
 	log.PrInfo("client: connected to datalogger: manufacturer %s device type %s (protocol v%s props %s)\n", infoRes.Manufacturer, infoRes.DeviceType, infoRes.ProtocolVersion, infoRes.DeviceProps)
 	log.PrDebug("client: datalogger info %+v\n", infoRes)
 
-	protoName := strings.Split(infoRes.DeviceProps, ",")[0]
+    var protoName = ""
+
+	if task.config.Protocol != nil {
+	    protoName = *task.config.Protocol
+	    log.PrDebug("using protocol from config file: %s\n", protoName)
+	} else {
+	    protoName = strings.Split(infoRes.DeviceProps, ",")[0]
+	}
 
 	if protoName != "0925" {
 		log.PrInfo("client: WARNING protocols other than 0925 are untested\n")
