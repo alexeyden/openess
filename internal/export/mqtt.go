@@ -120,7 +120,7 @@ func StartMqttExporter(config Config, col *collector.Collector) {
 		opts.SetUsername(*config.User)
 	}
 	if config.Password != nil {
-		opts.SetUsername(*config.Password)
+		opts.SetPassword(*config.Password)
 	}
 
 	cli := &mqttExporterTask{
