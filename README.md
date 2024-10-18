@@ -4,6 +4,16 @@ A service that exports power consumption and other metrics from Chinese solar in
 
 In theory it can work with most inverters supported by SmartESS, but some inverters will probably require minor improvements/fixes in code -- see limitations.
 
+## Supported inverters
+
+Tested and working:
+- PowMr VM PLUS 5.5KW ([Aliexpress link](https://aliexpress.ru/item/1005004211405506.html?spm=a2g2w.orderdetail.0.0.147d4aa6YGHm9J))
+
+Unsupported:
+- Anenji 4kw/7.2kw (see [this issue](https://github.com/alexeyden/openess/issues/2)). If you happen to have one of these models, check out this repo by sabatex: [NetDaemonApps.InverterAnenji-4kw-7.2kw](https://github.com/sabatex/NetDaemonApps.InverterAnenji-4kw-7.2kw).
+
+Please let me know via issues if your inverter happen to work too (and more so if it doesn't), so I can update the list here.
+
 ## Features and limitations
 
 The service periodically polls specified Modbus registers, interprets their values based on register space descriptors pulled from SmartESS and exports interpreted human-readable values over MQTT (e.g. to Home Assistant). In addition, it can configure the datalogger (SSID and password) and the inverter itself via CLI tool which is bundled into the service.
@@ -11,8 +21,6 @@ The service periodically polls specified Modbus registers, interprets their valu
 Register values are exported at `openess/registers/{name}` topics. Additionally, the datalogger connection status is exported at `openess/status` (`online`/`offline`).
 
 Currently only WiFi dataloggers are supported (no BLE/serial). I've only tested it with a thing called `Wi-Fi Plug Pro` ([Aliexpress link](https://aliexpress.ru/item/4000102754817.html?sku_id=12000027644368209&spm=a2g2w.productlist.search_results.0.3d667fd2ZBrSSr)) that came with my inverter, but others will probably work too.
-
-The only tested inverter is PowMr VM PLUS 5.5KW ([Aliexpress link](https://aliexpress.ru/item/1005004211405506.html?spm=a2g2w.orderdetail.0.0.147d4aa6YGHm9J)). Please let me know via issues if your inverter happen to work too, so I can update the list of tested inverters here.
 
 The service depends on original register space descriptor files pulled from SmartESS APK, see `xxxx.json` files in `data/`. The appropriate file is selected based on protocol string reported by datalogger during connection process.
 
