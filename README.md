@@ -14,7 +14,7 @@ Unsupported:
 
 Please let me know via issues if your inverter happen to work too (and more so if it doesn't), so I can update the list here.
 
-## Features and limitations
+## Features, limitations and known issues
 
 The service periodically polls specified Modbus registers, interprets their values based on register space descriptors pulled from SmartESS and exports interpreted human-readable values over MQTT (e.g. to Home Assistant). In addition, it can configure the datalogger (SSID and password) and the inverter itself via CLI tool which is bundled into the service.
 
@@ -29,6 +29,9 @@ Some other techinal limitations:
 - Registers with `valueType` other than `1` are not supported. It is not that hard to add other types, but we have to have an inverter for testing that supports them.
 - Some parts of descriptor files are not currently used, e.g. `OtherCodes` sections not related to enumerations.
 
+Known issues:
+- Automation protocol detection may not work correctly. You can override the protocol file via the `Protocol` field in the config.
+
 ## Installation and configuration 
 
 Installation:
@@ -42,11 +45,12 @@ Installation:
 
 Configuration file:
 
-```json
+```jsonc
 {
     "BindPort": 8899,                   // local TCP port used for datalogger connection
     "DeviceAddr": "192.168.1.37:58899", // datalogger address
     "ProtoPath": "data/",               // a path to descriptor files (xxxx.json)
+    "Protocol": "0925",                 // overrides automatic protocol detection (optional field)
     "Export": {  
         // MQTT export config
         "Broker": "tcp://127.0.0.1:1883", // broker address (required)
