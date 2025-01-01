@@ -29,6 +29,10 @@ type RegValue struct {
 	Units      *string
 }
 
+func nativeIsBigEndian() bool {
+	return binary.NativeEndian.Uint16([]byte{0x0a, 0x0b}) == uint16(0x0a0b)
+}
+
 func NewRegValueFromBytes(buf io.Reader, reg *protocol.Register, desc *protocol.Descriptor) RegValue {
 	var order binary.ByteOrder = binary.BigEndian
 	if reg.ByteSort == protocol.ByteSortLittleEndian {
@@ -44,7 +48,17 @@ func NewRegValueFromBytes(buf io.Reader, reg *protocol.Register, desc *protocol.
 		value.ValueRaw = uint32(val)
 	} else if *reg.Length == 2 {
 		var val uint32
-		binary.Read(buf, order, &val)
+		var word uint16
+
+		binary.Read(buf, order, &word)
+		val = uint32(word)
+		binary.Read(buf, order, &word)
+		val |= (uint32(word) << 16)
+
+		if nativeIsBigEndian() {
+			val = ((val&0xff)<<16 | (val >> 16))
+		}
+
 		value.ValueRaw = val
 	} else {
 		log.PrError("reg_read_descr: unexpected register length: %d\n", *reg.Length)
@@ -73,7 +87,7 @@ func NewRegValueFromBytes(buf io.Reader, reg *protocol.Register, desc *protocol.
 			}
 
 			value.ValueEnum = &enumStr
-			return value;
+			return value
 		}
 
 		enumStr, ok := reg.EnumerationStrings.Variants[protocol.EnumVariant(value.ValueRaw)]

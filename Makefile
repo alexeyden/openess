@@ -6,16 +6,16 @@ DEVICE=192.168.1.37:58899
 
 openess:
 ifdef ARCH
-	GOOS=linux GOARCH=$(ARCH) go build -o openess cmd/openess/*.go
+	GOOS=linux GOARCH=$(ARCH) go build -o openess $(wildcard cmd/openess/*.go)
 else
-	go build -o openess cmd/openess/*.go
+	go build -o openess $(wildcard cmd/openess/*.go)
 endif
 
 run-daemon: openess
-	go run ./cmd/openess/*.go -b -d $(DEVICE) -l debug 
+	go run $(wildcard ./cmd/openess/*.go) -b -d $(DEVICE) -l debug 
 
 run-cli: openess
-	go run ./cmd/openess/*.go -d $(DEVICE) -l debug
+	go run $(wildcard ./cmd/openess/*.go) -d $(DEVICE) -l debug
 
 clean:
 	go clean

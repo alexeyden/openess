@@ -226,7 +226,10 @@ func (req ForwardReadReq) DecodeResponse(data []byte) (ForwardRsp, error) {
 		return rsp, err
 	}
 
-	if int(byteCount) != len(data) - 5 {
+    // Issue #3:
+    // Some invertors send extra zeros after the response,
+    // so we don't expect the full length match
+	if int(byteCount) > len(data) - 5 {
 		return rsp, errors.New(fmt.Sprintf("invalid response length: %d (expected %d)", byteCount, len(data) - 5))
 	}
 
@@ -237,7 +240,7 @@ func (req ForwardReadReq) DecodeResponse(data []byte) (ForwardRsp, error) {
 		return rsp, err
 	}
 
-	crcLocal := getCrc16(data)
+	crcLocal := getCrc16(data[:byteCount + 5])
 
 	if crcLocal != 0 {
 		return rsp, errors.New(fmt.Sprintf("crc check failed: payload = %s\n", hex.EncodeToString(data)))
