@@ -87,9 +87,17 @@ func (task *mqttExporterTask) eventLoop() {
 				}
 
 				for n, v := range state {
-					log.PrInfo("export:mqtt: publishing register: %s = %s\n", n, v.LastValue.ToStringRaw())
+					var valStr string
 
-					tok = (*task.client).Publish(fmt.Sprintf("openess/register/%s", n), 0, false, v.LastValue.ToStringRaw())
+					if v.LastValue != nil {
+						valStr = v.LastValue.ToStringRaw()
+					} else {
+						valStr = ""
+					}
+
+					log.PrInfo("export:mqtt: publishing register: %s = %s\n", n, valStr)
+
+					tok = (*task.client).Publish(fmt.Sprintf("openess/register/%s", n), 0, false, valStr)
 					tok.Wait()
 
 					if tok.Error()!= nil {
