@@ -80,9 +80,9 @@ func (task *mqttExporterTask) eventLoop() {
 
 			select {
 			case state := <-c:
-			    tok = task.publishStatus(true)
+				tok = task.publishStatus(true)
 
-				if tok.Error()!= nil {
+				if tok.Error() != nil {
 					break
 				}
 
@@ -100,12 +100,12 @@ func (task *mqttExporterTask) eventLoop() {
 					tok = (*task.client).Publish(fmt.Sprintf("openess/register/%s", n), 0, false, valStr)
 					tok.Wait()
 
-					if tok.Error()!= nil {
-					    break
+					if tok.Error() != nil {
+						break
 					}
 				}
 			case connState := <-conn:
-			    tok = task.publishStatus(connState)
+				tok = task.publishStatus(connState)
 			}
 
 			if tok.Error() != nil {
