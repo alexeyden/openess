@@ -296,6 +296,44 @@ func (req ForwardReadReq) DecodeResponse(data []byte) (ForwardRsp, error) {
 		return rsp, err
 	}
 
+	// Buggy inverter firmware workaround:
+	// Some inverters send malformed exception responses where they set the high bit
+	// on the exception code byte instead of the function code byte.
+	// Standard Modbus exception: [DevAddr][FuncCode|0x80][ExceptionCode][CRC]
+	// Buggy firmware sends:      [DevAddr][FuncCode][0x80|ExceptionCode][CRC]
+	// Detect this pattern: if byteCount has high bit set AND response is only 5 bytes (too short for data)
+	if byteCount & 0x80 != 0 && len(data) == 5 {
+		exceptionCode := byteCount & 0x7F // Mask off the high bit to get actual exception code
+
+		// Verify CRC for this interpretation
+		crcLocal := getCrc16(data)
+		if crcLocal != 0 {
+			log.PrDebug("msg_forward: suspected buggy exception response failed CRC: %s\n", hex.EncodeToString(data))
+			return rsp, errors.New(fmt.Sprintf("crc check failed: payload = %s\n", hex.EncodeToString(data)))
+		}
+
+		exceptionMessages := map[byte]string{
+			0x01: "Illegal Function",
+			0x02: "Illegal Data Address",
+			0x03: "Illegal Data Value",
+			0x04: "Slave Device Failure",
+			0x05: "Acknowledge",
+			0x06: "Slave Device Busy",
+			0x08: "Memory Parity Error",
+			0x0A: "Gateway Path Unavailable",
+			0x0B: "Gateway Target Device Failed to Respond",
+		}
+
+		exceptionMsg, ok := exceptionMessages[exceptionCode]
+		if !ok {
+			exceptionMsg = fmt.Sprintf("Unknown exception code 0x%02X", exceptionCode)
+		}
+
+		log.PrDebug("msg_forward: detected buggy exception response (high bit on exception code instead of function code)\n")
+		return rsp, errors.New(fmt.Sprintf("Modbus exception from device %d (buggy firmware): %s (code 0x%02X)",
+			devAddr, exceptionMsg, exceptionCode))
+	}
+
     // Issue #3:
     // Some invertors send extra zeros after the response,
     // so we don't expect the full length match
