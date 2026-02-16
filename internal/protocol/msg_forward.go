@@ -156,6 +156,41 @@ func (req ForwardWriteReq) DecodeResponse(data []byte) (ForwardRsp, error) {
 		return rsp, err
 	}
 
+	// Check for Modbus exception response
+	// In Modbus, exception responses have the function code with the high bit (0x80) set
+	if funcNumber & 0x80 != 0 {
+		exceptionCode, err := buf.ReadByte()
+		if err != nil {
+			return rsp, err
+		}
+
+		// Verify CRC for exception response
+		crcLocal := getCrc16(data[:3])
+		if crcLocal != 0 {
+			return rsp, errors.New(fmt.Sprintf("crc check failed for exception response: payload = %s\n", hex.EncodeToString(data)))
+		}
+
+		exceptionMessages := map[byte]string{
+			0x01: "Illegal Function",
+			0x02: "Illegal Data Address",
+			0x03: "Illegal Data Value",
+			0x04: "Slave Device Failure",
+			0x05: "Acknowledge",
+			0x06: "Slave Device Busy",
+			0x08: "Memory Parity Error",
+			0x0A: "Gateway Path Unavailable",
+			0x0B: "Gateway Target Device Failed to Respond",
+		}
+
+		exceptionMsg, ok := exceptionMessages[exceptionCode]
+		if !ok {
+			exceptionMsg = fmt.Sprintf("Unknown exception code 0x%02X", exceptionCode)
+		}
+
+		return rsp, errors.New(fmt.Sprintf("Modbus exception response from device %d: %s (code 0x%02X)",
+			devAddr, exceptionMsg, exceptionCode))
+	}
+
 	if devAddr != req.DevAddr || funcNumber != req.FuncNumber {
 		return rsp, errors.New(fmt.Sprintf("invalid devaddr or funcNumber in response: %d, %d (expected %d/%d)",
 			devAddr, funcNumber, req.DevAddr, req.FuncNumber))
@@ -216,6 +251,41 @@ func (req ForwardReadReq) DecodeResponse(data []byte) (ForwardRsp, error) {
 		return rsp, err
 	}
 
+	// Check for Modbus exception response
+	// In Modbus, exception responses have the function code with the high bit (0x80) set
+	if funcNumber & 0x80 != 0 {
+		exceptionCode, err := buf.ReadByte()
+		if err != nil {
+			return rsp, err
+		}
+
+		// Verify CRC for exception response
+		crcLocal := getCrc16(data[:3])
+		if crcLocal != 0 {
+			return rsp, errors.New(fmt.Sprintf("crc check failed for exception response: payload = %s\n", hex.EncodeToString(data)))
+		}
+
+		exceptionMessages := map[byte]string{
+			0x01: "Illegal Function",
+			0x02: "Illegal Data Address",
+			0x03: "Illegal Data Value",
+			0x04: "Slave Device Failure",
+			0x05: "Acknowledge",
+			0x06: "Slave Device Busy",
+			0x08: "Memory Parity Error",
+			0x0A: "Gateway Path Unavailable",
+			0x0B: "Gateway Target Device Failed to Respond",
+		}
+
+		exceptionMsg, ok := exceptionMessages[exceptionCode]
+		if !ok {
+			exceptionMsg = fmt.Sprintf("Unknown exception code 0x%02X", exceptionCode)
+		}
+
+		return rsp, errors.New(fmt.Sprintf("Modbus exception response from device %d: %s (code 0x%02X)",
+			devAddr, exceptionMsg, exceptionCode))
+	}
+
 	if devAddr != req.DevAddr || funcNumber != req.FuncNumber {
 		return rsp, errors.New(fmt.Sprintf("invalid devaddr or funcNumber in response: %d, %d (expected %d/%d)",
 			devAddr, funcNumber, req.DevAddr, req.FuncNumber))
@@ -230,6 +300,8 @@ func (req ForwardReadReq) DecodeResponse(data []byte) (ForwardRsp, error) {
     // Some invertors send extra zeros after the response,
     // so we don't expect the full length match
 	if int(byteCount) > len(data) - 5 {
+		log.PrDebug("msg_forward: malformed response - byteCount=%d, total_data_len=%d, response=%s\n",
+			byteCount, len(data), hex.EncodeToString(data))
 		return rsp, errors.New(fmt.Sprintf("invalid response length: %d (expected %d)", byteCount, len(data) - 5))
 	}
 
