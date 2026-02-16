@@ -127,21 +127,33 @@ func (v *Enumeration) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+type BitField struct {
+	Address            int
+	Length             int
+	Title              map[string]string
+	EnumerationStrings *Enumeration
+}
+
 type Register struct {
 	Address            uint16
 	ByteSort           int
 	Length             *int
 	Title              map[string]string
 	EnumerationStrings *Enumeration
+	SubModels          *string
 	ValueType          int
 	Units              string
 	Scale              float32
+	// Set programmatically for synthesized sub-field registers
+	BitShift uint   `json:"-"`
+	BitMask  uint32 `json:"-"`
 }
 
 type Descriptor struct {
 	Root          []Register
 	Configuration Configuration
 	OtherCodes    map[string]ExternEnum
+	SubModelDefs  map[string][]BitField `json:"-"`
 }
 
 func LoadProtocolDescriptor(path string) (*Descriptor, error) {
@@ -167,7 +179,38 @@ func LoadProtocolDescriptor(path string) (*Descriptor, error) {
 		return nil, errors.New("unsupported addressing mode (offsetType != 0)")
 	}
 
+	result.SubModelDefs = parseSubModelDefs(data)
+
 	return &result, nil
+}
+
+func parseSubModelDefs(data []byte) map[string][]BitField {
+	var raw struct {
+		OtherCodes map[string]json.RawMessage
+	}
+
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return nil
+	}
+
+	result := make(map[string][]BitField)
+
+	for name, rawVal := range raw.OtherCodes {
+		if len(rawVal) == 0 || rawVal[0] != '[' {
+			continue
+		}
+
+		var fields []BitField
+		if err := json.Unmarshal(rawVal, &fields); err != nil {
+			continue
+		}
+
+		if len(fields) > 0 {
+			result[name] = fields
+		}
+	}
+
+	return result
 }
 
 func (desc Descriptor) FindRegisterByAddr(addr uint16) *Register {
@@ -183,6 +226,12 @@ func (desc Descriptor) FindRegisterByAddr(addr uint16) *Register {
 }
 
 func (desc Descriptor) FindRegister(name string) (*Segment, *Register) {
+	if dotIdx := strings.Index(name, "."); dotIdx >= 0 {
+		parentName := name[:dotIdx]
+		childName := name[dotIdx+1:]
+		return desc.findSubRegister(parentName, childName)
+	}
+
 	var reg *Register
 
 	for _, r := range desc.Root {
@@ -198,28 +247,79 @@ func (desc Descriptor) FindRegister(name string) (*Segment, *Register) {
 		return nil, nil
 	}
 
-	var seg *Segment
+	seg := desc.findSegment(reg.Address)
+	return seg, reg
+}
 
+func (desc Descriptor) findSegment(addr uint16) *Segment {
 	for _, g := range desc.Configuration.SystemInfoVC {
 		for _, s := range g.Segments {
-			if s.StartAddress >= reg.Address && (s.StartAddress+s.Length) >= reg.Address {
-				seg = &s
-				goto exit
+			if s.StartAddress >= addr && (s.StartAddress+s.Length) >= addr {
+				return &s
 			}
 		}
 	}
 
 	for _, g := range desc.Configuration.SystemSettingVC {
 		for _, s := range g.Segments {
-			if s.StartAddress >= reg.Address && (s.StartAddress+s.Length) >= reg.Address {
-				seg = &s
-				goto exit
+			if s.StartAddress >= addr && (s.StartAddress+s.Length) >= addr {
+				return &s
 			}
 		}
 	}
 
-exit:
-	return seg, reg
+	return nil
+}
+
+func (desc Descriptor) findSubRegister(parentName, childName string) (*Segment, *Register) {
+	var parentReg *Register
+
+	for _, r := range desc.Root {
+		regName, ok := r.Title["base"]
+		if ok && regName == parentName {
+			parentReg = &r
+			break
+		}
+	}
+
+	if parentReg == nil || parentReg.SubModels == nil {
+		return nil, nil
+	}
+
+	fields, ok := desc.SubModelDefs[*parentReg.SubModels]
+	if !ok {
+		return nil, nil
+	}
+
+	for _, field := range fields {
+		fieldName, ok := field.Title["base"]
+		if !ok || fieldName != childName {
+			continue
+		}
+
+		bitLen := field.Length
+		if bitLen == 0 {
+			bitLen = 1
+		}
+
+		synth := Register{
+			Address:            parentReg.Address,
+			ByteSort:           parentReg.ByteSort,
+			Length:             parentReg.Length,
+			Title:              field.Title,
+			EnumerationStrings: field.EnumerationStrings,
+			ValueType:          parentReg.ValueType,
+			Units:              parentReg.Units,
+			Scale:              1,
+			BitShift:           uint(field.Address),
+			BitMask:            (1 << uint(bitLen)) - 1,
+		}
+
+		seg := desc.findSegment(parentReg.Address)
+		return seg, &synth
+	}
+
+	return nil, nil
 }
 
 func (desc Descriptor) FindGroup(name string) []Segment {

@@ -64,6 +64,10 @@ func NewRegValueFromBytes(buf io.Reader, reg *protocol.Register, desc *protocol.
 		log.PrError("reg_read_descr: unexpected register length: %d\n", *reg.Length)
 	}
 
+	if reg.BitMask != 0 {
+		value.ValueRaw = (value.ValueRaw >> reg.BitShift) & reg.BitMask
+	}
+
 	if reg.EnumerationStrings != nil {
 		value.Type = RegTypeEnum
 
