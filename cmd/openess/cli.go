@@ -156,7 +156,15 @@ func InteractiveMain(args Args) {
 		case "read-named":
 			name := args[1]
 			desc := cli.GetDescriptor()
+			if desc == nil {
+				fmt.Printf("error: descriptor not loaded\n")
+				continue
+			}
 			seg, reg := desc.FindRegister(name)
+			if seg == nil || reg == nil {
+				fmt.Printf("error: register %q not found\n", name)
+				continue
+			}
 			req := commands.NewRegReadDescr(seg, reg)
 			resp, err := client.SendCommand(cli, req)
 			if err != nil {
