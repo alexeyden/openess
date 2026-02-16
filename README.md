@@ -66,6 +66,13 @@ Configuration file:
             // Keys are MQTT register topic names: openess/registers/{name}
             // Values are register names from descriptor file
             "working_state": "Working State",
+            "battery_capacity": "Battery capacity %",
+            "battery_voltage": "Battery voltage",
+            "charging_current": "Charging current",
+            "discharge_current": "Battery discharge current",
+            "pv_voltage": "PV input voltage",
+            "pv_power": "PV input power",
+            "ac_input_voltage": "AC input voltage",
             "output_voltage": "Output voltage",
             "output_power": "Output apparent power ",
             "output_active_power": "Output active power",
@@ -110,35 +117,197 @@ When writing registers, enumeration variants are represented by numeric values, 
 
 ## Integration with Home Assistant
 
-Example configuration:
+Complete configuration example for PowMr VM PLUS 5.5KW and similar inverters.
+
+**Note:** These inverters fail to read cumulative energy registers for some reqson (`today_energy`, `all_energy`, or `month_energy`). Use the integration sensors below to calculate energy from power measurements instead.
 
 ```yaml
 mqtt:
   sensor:
-    - name: "powmr_output_power"
-      state_topic: "openess/register/output_active_power"
+    # Working State (enum: Power On / Stand By / Invert Mode / Line Mode / Bypass / Fault)
+    - name: "Inverter Working State"
+      unique_id: inverter_working_state
+      state_topic: "openess/register/working_state"
       availability_topic: "openess/status"
-      value_template: "{{value | float | round(2)}}"
+      icon: mdi:state-machine
+
+    # Battery
+    - name: "Inverter Battery"
+      unique_id: inverter_battery_capacity
+      state_topic: "openess/register/battery_capacity"
+      availability_topic: "openess/status"
+      unit_of_measurement: "%"
+      device_class: battery
+      state_class: measurement
+      value_template: "{{ value | int }}"
+
+    - name: "Inverter Battery Voltage"
+      unique_id: inverter_battery_voltage
+      state_topic: "openess/register/battery_voltage"
+      availability_topic: "openess/status"
+      unit_of_measurement: "V"
+      device_class: voltage
+      state_class: measurement
+      value_template: "{{ value | float | round(1) }}"
+
+    - name: "Inverter Battery Charging Current"
+      unique_id: inverter_charging_current
+      state_topic: "openess/register/charging_current"
+      availability_topic: "openess/status"
+      unit_of_measurement: "A"
+      device_class: current
+      state_class: measurement
+      value_template: "{{ value | float | round(1) }}"
+
+    - name: "Inverter Battery Discharge Current"
+      unique_id: inverter_discharge_current
+      state_topic: "openess/register/discharge_current"
+      availability_topic: "openess/status"
+      unit_of_measurement: "A"
+      device_class: current
+      state_class: measurement
+      value_template: "{{ value | float | round(1) }}"
+
+    # Solar (PV)
+    - name: "Inverter PV Voltage"
+      unique_id: inverter_pv_voltage
+      state_topic: "openess/register/pv_voltage"
+      availability_topic: "openess/status"
+      unit_of_measurement: "V"
+      device_class: voltage
+      state_class: measurement
+      value_template: "{{ value | float | round(1) }}"
+
+    - name: "Inverter PV Power"
+      unique_id: inverter_pv_power
+      state_topic: "openess/register/pv_power"
+      availability_topic: "openess/status"
       unit_of_measurement: "W"
       device_class: power
       state_class: measurement
-    - name: "powmr_output_power_percent"
-      availability_topic: "openess/status"
-      state_topic: "openess/register/output_power_percent"
-      value_template: "{{value | float | round(2)}}"
-      unit_of_measurement: "%"
-      device_class: power_factor
-      state_class: measurement
+      value_template: "{{ value | float | round(0) }}"
 
-# You have to integrate values of output power sensor over time,
-# either via `inegration` or `utility_meter` to get consumption in KWh,
-# otherwise it wouldnt show up in the Energy tab
+    # Grid (AC Input)
+    - name: "Inverter AC Input Voltage"
+      unique_id: inverter_ac_input_voltage
+      state_topic: "openess/register/ac_input_voltage"
+      availability_topic: "openess/status"
+      unit_of_measurement: "V"
+      device_class: voltage
+      state_class: measurement
+      value_template: "{{ value | float | round(1) }}"
+
+    # Output (Load)
+    - name: "Inverter Output Voltage"
+      unique_id: inverter_output_voltage
+      state_topic: "openess/register/output_voltage"
+      availability_topic: "openess/status"
+      unit_of_measurement: "V"
+      device_class: voltage
+      state_class: measurement
+      value_template: "{{ value | float | round(1) }}"
+
+    - name: "Inverter Output Apparent Power"
+      unique_id: inverter_output_apparent_power
+      state_topic: "openess/register/output_power"
+      availability_topic: "openess/status"
+      unit_of_measurement: "VA"
+      device_class: apparent_power
+      state_class: measurement
+      value_template: "{{ value | float | round(0) }}"
+
+    - name: "Inverter Output Active Power"
+      unique_id: inverter_output_active_power
+      state_topic: "openess/register/output_active_power"
+      availability_topic: "openess/status"
+      unit_of_measurement: "W"
+      device_class: power
+      state_class: measurement
+      value_template: "{{ value | float | round(0) }}"
+
+    - name: "Inverter Output Load"
+      unique_id: inverter_output_load_pct
+      state_topic: "openess/register/output_power_percent"
+      availability_topic: "openess/status"
+      unit_of_measurement: "%"
+      state_class: measurement
+      value_template: "{{ value | float | round(0) }}"
+
+template:
+  - sensor:
+      # Grid power: positive when consuming from grid (Line Mode)
+      - name: "Inverter Grid Power"
+        unique_id: inverter_grid_power
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        state: >
+          {% if states('sensor.inverter_working_state') in ['Line Mode', 'Bypass'] %}
+            {{ states('sensor.inverter_output_power') | float(0) }}
+          {% else %}
+            0
+          {% endif %}
+
+      # Battery discharge power
+      - name: "Inverter Battery Discharge Power"
+        unique_id: inverter_battery_discharge_power
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        state: >
+          {{ (states('sensor.inverter_battery_discharge_current') | float(0))
+             * (states('sensor.inverter_battery_voltage') | float(0)) }}
+
+      # Battery charge power
+      - name: "Inverter Battery Charge Power"
+        unique_id: inverter_battery_charge_power
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        state: >
+          {{ (states('sensor.inverter_battery_charging_current') | float(0))
+             * (states('sensor.inverter_battery_voltage') | float(0)) }}
 
 sensor:
+  # Convert power (W) to energy (kWh) via integration
+  # These sensors calculate energy totals from power measurements
   - platform: integration
-    source: sensor.powmr_output_power
-    name: energy_spent
+    source: sensor.inverter_pv_power
+    name: "Solar Energy"
+    unique_id: inverter_solar_energy
     unit_prefix: k
     round: 2
+    method: left
+
+  - platform: integration
+    source: sensor.inverter_grid_power
+    name: "Grid Energy Consumed"
+    unique_id: inverter_grid_energy
+    unit_prefix: k
+    round: 2
+    method: left
+
+  - platform: integration
+    source: sensor.inverter_battery_discharge_power
+    name: "Battery Energy Discharged"
+    unique_id: inverter_battery_energy_discharged
+    unit_prefix: k
+    round: 2
+    method: left
+
+  - platform: integration
+    source: sensor.inverter_battery_charge_power
+    name: "Battery Energy Charged"
+    unique_id: inverter_battery_energy_charged
+    unit_prefix: k
+    round: 2
+    method: left
 ```
+
+This configuration provides:
+- Real-time monitoring of battery, solar (PV), grid, and output metrics
+- Calculated energy sensors that integrate power over time for use in Home Assistant's Energy Dashboard
+- Template sensors for derived values (grid power, battery charge/discharge power)
+
+To use this configuration, ensure your `config.json` includes the required registers as shown in the Configuration section above.
 
