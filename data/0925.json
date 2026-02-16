@@ -2196,10 +2196,9 @@
 			"units": "",
 			"enumerationStrings": {
 				"base": {
-					"3": "Battery Ok",
-					"1": "Battery discharging",
-					"2": "Battery charging",
-					"0": "Battery disconnected"
+					"0": "Load off",
+					"1": "Load normal",
+					"2": "Load overload"
 				},
 				"zh_cn": {
 					"0": "负载关闭",
