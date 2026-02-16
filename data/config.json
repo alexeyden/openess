@@ -1,6 +1,6 @@
 {
     "BindPort": 8899,
-    "DeviceAddr": "192.168.1.37:58899",
+    "DeviceAddr": "192.168.31.52:58899",
     "ProtoPath": "data/",
     "Export": {
         "Broker": "tcp://127.0.0.1:1883"
@@ -9,11 +9,22 @@
         "Interval": "500ms",
         "Enabled": true,
         "Registers": {
-            "working_state": "Working State",
-            "output_voltage": "Output voltage",
-            "output_power": "Output apparent power ",
-            "output_active_power": "Output active power",
-            "output_power_percent": "AC output Load %"
+		      "working_state":       "Working State",
+              "battery_capacity":    "Battery capacity %",
+              "battery_voltage":     "Battery voltage",
+              "charging_current":    "Charging current",
+              "discharge_current":   "Battery discharge current",
+              "pv_voltage":          "PV input voltage",
+              "pv_power":            "PV input power",
+              "ac_input_voltage":    "AC input voltage",
+              "output_voltage":      "Output voltage",
+              "output_power":        "Output apparent power ",
+              "output_active_power": "Output active power",
+              "output_power_percent":"AC output Load %",
+              "today_energy":        "Today energy",
+              "month_energy":        "Month energy",
+              "year_energy":         "Year energy",
+              "all_energy":          "All energy"
         }
     }
 }
