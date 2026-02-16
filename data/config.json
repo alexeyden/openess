@@ -9,7 +9,7 @@
         "Interval": "500ms",
         "Enabled": true,
         "Registers": {
-		      "working_state":       "Working State",
+              "working_state":       "Working State",
               "battery_capacity":    "Battery capacity %",
               "battery_voltage":     "Battery voltage",
               "charging_current":    "Charging current",
@@ -20,11 +20,7 @@
               "output_voltage":      "Output voltage",
               "output_power":        "Output apparent power ",
               "output_active_power": "Output active power",
-              "output_power_percent":"AC output Load %",
-              "today_energy":        "Today energy",
-              "month_energy":        "Month energy",
-              "year_energy":         "Year energy",
-              "all_energy":          "All energy"
+              "output_power_percent":"AC output Load %"
         }
     }
 }
